@@ -39,6 +39,8 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/visibility_control.h"
 
+#define TRANSFORM_LISTENER_NOT_IMPLEMENTED
+
 namespace tf2_ros{
 
 /** \brief This class provides an easy way to request and receive coordinate frame transform information.

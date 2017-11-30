@@ -60,6 +60,19 @@ void transformTF2ToMsg(const tf2::Transform& tf2, geometry_msgs::msg::Transform&
 }
 
 /** \brief convert Transform to Transform msg*/
+void transformTF2ToMsg(const tf2::Transform& tf2, geometry_msgs::msg::TransformStamped& msg, tf2::TimePoint stamp, const std::string& frame_id, const std::string& child_frame_id)
+{
+  transformTF2ToMsg(tf2, msg.transform);
+
+  std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch());
+  std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(stamp.time_since_epoch());
+  msg.header.stamp.sec = (int32_t)s.count();
+  msg.header.stamp.nanosec = (uint32_t)(ns.count() % 1000000000ull);
+
+  msg.header.frame_id = frame_id;
+  msg.child_frame_id = child_frame_id;
+}
+
 void transformTF2ToMsg(const tf2::Transform& tf2, geometry_msgs::msg::TransformStamped& msg, builtin_interfaces::msg::Time stamp, const std::string& frame_id, const std::string& child_frame_id)
 {
   transformTF2ToMsg(tf2, msg.transform);
@@ -77,6 +90,19 @@ void transformTF2ToMsg(const tf2::Quaternion& orient, const tf2::Vector3& pos, g
   msg.rotation.y = orient.y();
   msg.rotation.z = orient.z();
   msg.rotation.w = orient.w();
+}
+
+void transformTF2ToMsg(const tf2::Quaternion& orient, const tf2::Vector3& pos, geometry_msgs::msg::TransformStamped& msg, tf2::TimePoint stamp, const std::string& frame_id, const std::string& child_frame_id)
+{
+  transformTF2ToMsg(orient, pos, msg.transform);
+
+  std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch());
+  std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(stamp.time_since_epoch());
+  msg.header.stamp.sec = (int32_t)s.count();
+  msg.header.stamp.nanosec = (uint32_t)(ns.count() % 1000000000ull);
+
+  msg.header.frame_id = frame_id;
+  msg.child_frame_id = child_frame_id;
 }
 
 void transformTF2ToMsg(const tf2::Quaternion& orient, const tf2::Vector3& pos, geometry_msgs::msg::TransformStamped& msg, builtin_interfaces::msg::Time stamp, const std::string& frame_id, const std::string& child_frame_id)
