@@ -114,9 +114,9 @@ namespace tf2_ros
   class MessageFilter : public MessageFilterBase, public message_filters::SimpleFilter<M>
   {
   public:
-    using MConstPtr = boost::shared_ptr<M const>;
+    using MConstPtr = std::shared_ptr<M const>;
     typedef ros::MessageEvent<M const> MEvent;
-    typedef boost::function<void(const MConstPtr&, FilterFailureReason)> FailureCallback;
+    typedef std::function<void(const MConstPtr&, FilterFailureReason)> FailureCallback;
     typedef boost::signals2::signal<void(const MConstPtr&, FilterFailureReason)> FailureSignal;
 
     // If you hit this assert your message does not have a header, or does not have the HasHeader trait defined for it
@@ -290,7 +290,7 @@ namespace tf2_ros
       TF2_ROS_MESSAGEFILTER_DEBUG("%s", "Cleared");
 
       bc_.removeTransformableCallback(callback_handle_);
-      callback_handle_ = bc_.addTransformableCallback(boost::bind(&MessageFilter::transformable, this, _1, _2, _3, _4, _5));
+      callback_handle_ = bc_.addTransformableCallback(std::bind(&MessageFilter::transformable, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
 
       messages_.clear();
       message_count_ = 0;
@@ -306,15 +306,17 @@ namespace tf2_ros
       }
 
       namespace mt = ros::message_traits;
+
+      // TODO: message_trait system needs HAS_HEADER?
+      //auto message = info.event.getMessage();
+      //std::string frame_id_unstripped = mt::FrameId<M>::value(*message);
       const MConstPtr& message = evt.getMessage();
-      std::string frame_id_unstripped = mt::FrameId<M>::pointer(*message)->c_str();
+      auto frame_id_unstripped = message->header.frame_id;
       std::string frame_id = stripSlash(frame_id_unstripped);
       // TODO: CLEAN THIS CONVERSION
-      const ros::Time* timeStamp = mt::TimeStamp<M>::pointer(*message);
-      boost::posix_time::time_duration const time_since_epoch = timeStamp->toBoost() - boost::posix_time::from_time_t(0);
-      std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t = std::chrono::system_clock::from_time_t(time_since_epoch.total_seconds());
-      long nsec = time_since_epoch.fractional_seconds()*(1000000000 / time_since_epoch.ticks_per_second());
-      tf2::TimePoint stamp = t + std::chrono::nanoseconds(nsec);
+      auto timeStamp = message->header.stamp;
+      int64_t d = timeStamp.sec * 1000000000ull + timeStamp.nanosec;
+      tf2::TimePoint stamp = tf2::TimePoint(std::chrono::nanoseconds(d));
 
       if (frame_id.empty())
       {
@@ -444,7 +446,7 @@ namespace tf2_ros
     message_filters::Connection registerFailureCallback(const FailureCallback& callback)
     {
       std::unique_lock<std::mutex> lock(failure_signal_mutex_);
-      return message_filters::Connection(boost::bind(&MessageFilter::disconnectFailure, this, _1), failure_signal_.connect(callback));
+      return message_filters::Connection(std::bind(&MessageFilter::disconnectFailure, this, std::placeholders::_1), failure_signal_.connect(callback));
     }
 
     virtual void setQueueSize(uint32_t new_queue_size)
@@ -472,7 +474,7 @@ namespace tf2_ros
       warned_about_empty_frame_id_ = false;
       expected_success_count_ = 1;
 
-      callback_handle_ = bc_.addTransformableCallback(boost::bind(&MessageFilter::transformable, this, _1, _2, _3, _4, _5));
+      callback_handle_ = bc_.addTransformableCallback(std::bind(&MessageFilter::transformable, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
     }
 
     void transformable(tf2::TransformableRequestHandle request_handle, const std::string& target_frame, const std::string& source_frame,
@@ -509,15 +511,16 @@ namespace tf2_ros
       }
 
       bool can_transform = true;
+      // TODO: message_trait system needs HAS_HEADER?
+      //auto message = info.event.getMessage();
+      //std::string frame_id_unstripped = mt::FrameId<M>::value(*message);
       const MConstPtr& message = info.event.getMessage();
-      std::string frame_id_unstripped = mt::FrameId<M>::pointer(*message)->c_str();
+      auto frame_id_unstripped = message->header.frame_id;
       std::string frame_id = stripSlash(frame_id_unstripped);
       // TODO: CLEAN THIS CONVERSION
-      const ros::Time* timeStamp = mt::TimeStamp<M>::pointer(*message);
-      boost::posix_time::time_duration const time_since_epoch = timeStamp->toBoost() - boost::posix_time::from_time_t(0);
-      std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t = std::chrono::system_clock::from_time_t(time_since_epoch.total_seconds());
-      long nsec = time_since_epoch.fractional_seconds()*(1000000000 / time_since_epoch.ticks_per_second());
-      tf2::TimePoint stamp = t + std::chrono::nanoseconds(nsec);
+      auto timeStamp = message->header.stamp;
+      int64_t d = timeStamp.sec * 1000000000ull + timeStamp.nanosec;
+      tf2::TimePoint stamp = tf2::TimePoint(std::chrono::nanoseconds(d));
 
       if (result == tf2::TransformAvailable)
       {
